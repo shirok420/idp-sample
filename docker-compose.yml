@@ -1,0 +1,117 @@
+version: '3.8'
+
+services:
+  # Keycloak - 認証・認可基盤
+  keycloak:
+    image: quay.io/keycloak/keycloak:23.0.3
+    container_name: idp-keycloak
+    environment:
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+      - KC_DB=postgres
+      - KC_DB_URL=jdbc:postgresql://postgres:5432/keycloak
+      - KC_DB_USERNAME=keycloak
+      - KC_DB_PASSWORD=keycloak
+    command: start-dev
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+    networks:
+      - idp-network
+    restart: unless-stopped
+    volumes:
+      - ./config/keycloak:/opt/keycloak/data/import
+
+  # MidPoint - IDM（Identity Management）
+  midpoint:
+    image: evolveum/midpoint:4.8
+    container_name: idp-midpoint
+    environment:
+      - MIDPOINT_HOME=/opt/midpoint/var
+      - REPO_DATABASE_TYPE=postgresql
+      - REPO_HOST=postgres
+      - REPO_DATABASE=midpoint
+      - REPO_USER=midpoint
+      - REPO_PASSWORD=midpoint
+      - MP_ADMIN_USERNAME=administrator
+      - MP_ADMIN_PASSWORD=5ecr3t
+    ports:
+      - "8081:8080"
+    depends_on:
+      - postgres
+    networks:
+      - idp-network
+    restart: unless-stopped
+    volumes:
+      - ./config/midpoint:/opt/midpoint/var
+
+  # Kong - APIゲートウェイ
+  kong:
+    image: kong:3.5
+    container_name: idp-kong
+    environment:
+      - KONG_DATABASE=postgres
+      - KONG_PG_HOST=postgres
+      - KONG_PG_DATABASE=kong
+      - KONG_PG_USER=kong
+      - KONG_PG_PASSWORD=kong
+      - KONG_PROXY_ACCESS_LOG=/dev/stdout
+      - KONG_ADMIN_ACCESS_LOG=/dev/stdout
+      - KONG_PROXY_ERROR_LOG=/dev/stderr
+      - KONG_ADMIN_ERROR_LOG=/dev/stderr
+      - KONG_ADMIN_LISTEN=0.0.0.0:8001, 0.0.0.0:8444 ssl
+    ports:
+      - "8000:8000"
+      - "8443:8443"
+      - "8001:8001"
+      - "8444:8444"
+    depends_on:
+      - postgres
+      - kong-migrations
+    networks:
+      - idp-network
+    restart: unless-stopped
+    volumes:
+      - ./config/kong:/etc/kong/conf.d
+
+  # Kong初期マイグレーション
+  kong-migrations:
+    image: kong:3.5
+    container_name: idp-kong-migrations
+    command: kong migrations bootstrap
+    environment:
+      - KONG_DATABASE=postgres
+      - KONG_PG_HOST=postgres
+      - KONG_PG_DATABASE=kong
+      - KONG_PG_USER=kong
+      - KONG_PG_PASSWORD=kong
+    depends_on:
+      - postgres
+    networks:
+      - idp-network
+    restart: on-failure
+
+  # 共有データベース（PostgreSQL）
+  postgres:
+    image: postgres:16
+    container_name: idp-postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_MULTIPLE_DATABASES=keycloak,midpoint,kong
+    ports:
+      - "5432:5432"
+    networks:
+      - idp-network
+    restart: unless-stopped
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./scripts/init-multiple-db.sh:/docker-entrypoint-initdb.d/init-multiple-db.sh
+
+networks:
+  idp-network:
+    driver: bridge
+
+volumes:
+  postgres-data:

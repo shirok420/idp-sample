@@ -1,0 +1,45 @@
+# EditorConfig is awesome: https://EditorConfig.org
+
+# トップレベルのEditorConfigファイル
+root = true
+
+# すべてのファイル
+[*]
+charset = utf-8
+end_of_line = lf
+indent_style = space
+indent_size = 2
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# Markdownファイル
+[*.md]
+trim_trailing_whitespace = false
+
+# Pythonファイル
+[*.py]
+indent_size = 4
+
+# Javaファイル
+[*.java]
+indent_size = 4
+
+# XMLファイル
+[*.{xml,xsd}]
+indent_size = 2
+
+# JSONファイル
+[*.json]
+indent_size = 2
+
+# YAMLファイル
+[*.{yml,yaml}]
+indent_size = 2
+
+# Dockerfileファイル
+[Dockerfile]
+indent_size = 4
+
+# Makefileファイル
+[Makefile]
+indent_style = tab

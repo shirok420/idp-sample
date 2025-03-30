@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<systemConfiguration xmlns="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+                    xmlns:c="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+                    xmlns:t="http://prism.evolveum.com/xml/ns/public/types-3"
+                    oid="00000000-0000-0000-0000-000000000001">
+    <name>SystemConfiguration</name>
+    <globalSecurityPolicy>
+        <securityPolicy>
+            <passwordPolicy>
+                <name>Default Password Policy</name>
+                <description>Default password policy</description>
+                <minLength>8</minLength>
+                <maxLength>128</maxLength>
+                <minUniqueChars>3</minUniqueChars>
+                <checkAgainstDictionary>true</checkAgainstDictionary>
+                <checkPattern>true</checkPattern>
+                <complexity>1</complexity>
+                <minAge>P0D</minAge>
+                <maxAge>P90D</maxAge>
+                <historyLength>10</historyLength>
+                <lockoutMaxFailedAttempts>5</lockoutMaxFailedAttempts>
+                <lockoutFailedAttemptsDuration>PT15M</lockoutFailedAttemptsDuration>
+                <lockoutDuration>PT30M</lockoutDuration>
+            </passwordPolicy>
+        </securityPolicy>
+    </globalSecurityPolicy>
+    <logging>
+        <appender xsi:type="c:FileAppenderConfigurationType" name="IDM_LOG" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+            <pattern>%date [%thread] %level \(%logger\): %msg%n</pattern>
+            <fileName>${midpoint.home}/log/idm.log</fileName>
+            <filePattern>${midpoint.home}/log/idm-%d{yyyy-MM-dd}.%i.log</filePattern>
+            <maxHistory>30</maxHistory>
+            <maxFileSize>100MB</maxFileSize>
+            <append>true</append>
+        </appender>
+        <rootLoggerAppender>IDM_LOG</rootLoggerAppender>
+        <rootLoggerLevel>INFO</rootLoggerLevel>
+        <classLogger>
+            <level>INFO</level>
+            <package>com.evolveum.midpoint</package>
+        </classLogger>
+    </logging>
+    <internals>
+        <tracing>
+            <enabled>true</enabled>
+        </tracing>
+    </internals>
+    <adminGuiConfiguration>
+        <userDashboardLink>
+            <targetUrl>/self/profile</targetUrl>
+            <label>Profile</label>
+            <description>User profile page</description>
+            <icon>fa fa-user</icon>
+            <color>blue</color>
+            <authorization>http://midpoint.evolveum.com/xml/ns/public/security/authorization-ui-3#selfAll</authorization>
+        </userDashboardLink>
+        <enableExperimentalFeatures>true</enableExperimentalFeatures>
+    </adminGuiConfiguration>
+    <defaultObjectPolicyConfiguration>
+        <type>UserType</type>
+        <objectTemplateRef oid="10000000-0000-0000-0000-000000000222" type="c:ObjectTemplateType"/>
+    </defaultObjectPolicyConfiguration>
+</systemConfiguration>

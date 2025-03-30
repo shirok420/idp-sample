@@ -1,0 +1,129 @@
+name: "Terraform GitOps"
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'terraform/**'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'terraform/**'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: '環境を選択（dev/staging/production）'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - staging
+          - production
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  terraform:
+    name: "Terraform"
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'dev' }}
+    
+    # 環境ごとに異なる設定を使用
+    env:
+      TF_VAR_environment: ${{ github.event.inputs.environment || 'dev' }}
+      # GitHub Secretsから環境変数を設定
+      TF_VAR_keycloak_user: ${{ secrets.KEYCLOAK_USER }}
+      TF_VAR_keycloak_password: ${{ secrets.KEYCLOAK_PASSWORD }}
+      # 環境ごとのURLを設定
+      TF_VAR_keycloak_url: ${{ github.event.inputs.environment == 'production' && 'https://keycloak.example.com' || github.event.inputs.environment == 'staging' && 'https://keycloak-staging.example.com' || 'http://localhost:8080' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.5.7
+          cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
+
+      - name: Terraform Format
+        id: fmt
+        run: terraform fmt -check -recursive
+        working-directory: ./terraform
+        continue-on-error: true
+
+      - name: Terraform Init
+        id: init
+        run: terraform init
+        working-directory: ./terraform
+
+      - name: Terraform Validate
+        id: validate
+        run: terraform validate -no-color
+        working-directory: ./terraform
+
+      - name: Terraform Plan
+        id: plan
+        run: terraform plan -no-color -input=false
+        working-directory: ./terraform
+        continue-on-error: true
+
+      # プルリクエストの場合はコメントを追加
+      - name: Update Pull Request
+        uses: actions/github-script@v6
+        if: github.event_name == 'pull_request'
+        env:
+          PLAN: "terraform\n${{ steps.plan.outputs.stdout }}"
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const output = `#### Terraform Format and Style 🖌\`${{ steps.fmt.outcome }}\`
+            #### Terraform Initialization ⚙️\`${{ steps.init.outcome }}\`
+            #### Terraform Validation 🤖\`${{ steps.validate.outcome }}\`
+            #### Terraform Plan 📖\`${{ steps.plan.outcome }}\`
+
+            <details><summary>Show Plan</summary>
+
+            \`\`\`\n
+            ${process.env.PLAN}
+            \`\`\`
+
+            </details>
+
+            *Pushed by: @${{ github.actor }}, Action: \`${{ github.event_name }}\`*`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            })
+
+      # mainブランチへのプッシュまたは手動実行の場合はapplyを実行
+      - name: Terraform Apply
+        if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+        run: terraform apply -auto-approve -input=false
+        working-directory: ./terraform
+
+      # 実行結果をSlackに通知（オプション）
+      - name: Notify Slack
+        if: always()
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_CHANNEL: terraform-gitops
+          SLACK_COLOR: ${{ job.status }}
+          SLACK_TITLE: "Terraform GitOps - ${{ github.event.inputs.environment || 'dev' }}"
+          SLACK_MESSAGE: |
+            Repository: ${{ github.repository }}
+            Workflow: ${{ github.workflow }}
+            Status: ${{ job.status }}
+            Actor: ${{ github.actor }}
+            Event: ${{ github.event_name }}
+          SLACK_FOOTER: "GitHub Actions"
