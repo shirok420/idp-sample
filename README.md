@@ -11,7 +11,7 @@
 - **Kong (8000/8001ポート)**: APIゲートウェイ
 - **PostgreSQL (5432ポート)**: 共有データベース
 
-![アーキテクチャ図](docs/architecture.png)
+![アーキテクチャ図](https://www.plantuml.com/plantuml/proxy?cache=no&src=https://raw.githubusercontent.com/shirok420/idp-sample/main/docs/architecture.puml)
 
 ## 認証・認可フロー
 
@@ -23,65 +23,7 @@
 
 以下のシーケンス図は、システム全体の認証・認可フローを示しています：
 
-```plantuml
-@startuml OIDC認証・認可フロー
-!theme plain
-skinparam dpi 300
-skinparam backgroundColor white
-skinparam sequenceArrowThickness 2
-skinparam roundcorner 10
-skinparam sequenceParticipant underline
-
-actor "ユーザー" as User
-participant "クライアント\nアプリケーション" as Client
-participant "Kong\nAPIゲートウェイ" as Kong
-participant "Keycloak\n(IdP)" as Keycloak
-participant "MidPoint\n(IDM)" as MidPoint
-participant "保護された\nリソース" as Resource
-database "PostgreSQL" as DB
-
-== 初期設定フェーズ ==
-MidPoint -> DB: ユーザー情報の管理
-MidPoint -> Keycloak: ユーザー情報の同期
-note right: MidPointがユーザーリソースとして\nKeycloakにユーザー情報を提供
-
-== 認証フェーズ ==
-User -> Client: アクセス要求
-Client -> Kong: APIリクエスト
-Kong -> Client: 認証が必要
-Client -> User: ログイン画面表示
-User -> Client: 認証情報入力
-Client -> Keycloak: 認証リクエスト
-Keycloak -> MidPoint: ユーザー情報の検証
-MidPoint -> Keycloak: ユーザー情報・属性の返却
-Keycloak -> Client: IDトークン・アクセストークン発行
-Client -> User: 認証完了
-
-== 認可フェーズ ==
-User -> Client: 保護リソースへのアクセス要求
-Client -> Kong: APIリクエスト + アクセストークン
-Kong -> Keycloak: トークン検証
-Keycloak -> Kong: トークン有効性・権限情報
-Kong -> Kong: アクセス制御ポリシーの評価
-note right: ゼロトラストの原則に基づき\n全てのアクセスを検証
-alt 認可成功
-    Kong -> Resource: リクエスト転送
-    Resource -> Kong: レスポンス
-    Kong -> Client: レスポンス転送
-    Client -> User: 結果表示
-else 認可失敗
-    Kong -> Client: 403 Forbidden
-    Client -> User: アクセス拒否メッセージ
-end
-
-== 継続的検証フェーズ ==
-note over Kong: 全てのAPIリクエストを監視
-Kong -> Kong: リクエスト分析・異常検知
-Kong -> Keycloak: 定期的なトークン再検証
-Keycloak -> Kong: 最新の権限情報
-
-@enduml
-```
+![OIDC認証・認可フロー](https://www.plantuml.com/plantuml/proxy?cache=no&src=https://raw.githubusercontent.com/shirok420/idp-sample/main/docs/auth-sequence.puml)
 
 ### 詳細な認証・認可フロー
 

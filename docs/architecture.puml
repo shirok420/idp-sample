@@ -1,0 +1,49 @@
+@startuml アーキテクチャ図
+!theme plain
+skinparam dpi 300
+skinparam backgroundColor white
+skinparam componentStyle rectangle
+skinparam componentBorderColor black
+skinparam componentBorderThickness 2
+skinparam componentBackgroundColor white
+
+package "IDP-Sample アーキテクチャ" {
+  [クライアント\nアプリケーション] as Client
+
+  package "APIゲートウェイ" {
+    [Kong] as Kong
+  }
+
+  package "認証・認可基盤" {
+    [Keycloak] as Keycloak
+  }
+
+  package "IDM" {
+    [MidPoint] as MidPoint
+  }
+
+  package "データベース" {
+    [PostgreSQL] as DB
+  }
+
+  package "保護されたリソース" {
+    [マイクロサービス1] as Service1
+    [マイクロサービス2] as Service2
+    [マイクロサービス3] as Service3
+  }
+}
+
+Client --> Kong : "1. APIリクエスト"
+Kong --> Keycloak : "2. 認証・認可"
+Keycloak --> MidPoint : "3. ユーザー情報取得"
+MidPoint --> DB : "4. データアクセス"
+Keycloak --> Kong : "5. トークン・権限情報"
+Kong --> Service1 : "6. 認可されたリクエスト"
+Kong --> Service2 : "6. 認可されたリクエスト"
+Kong --> Service3 : "6. 認可されたリクエスト"
+
+note right of Kong : "ゼロトラストの原則に基づき\n全てのアクセスを検証"
+note right of Keycloak : "IdPとして機能"
+note right of MidPoint : "ユーザーリソースとして機能"
+
+@enduml
