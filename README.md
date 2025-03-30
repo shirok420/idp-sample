@@ -24,7 +24,7 @@
 ### 1. リポジトリのクローン
 
 ```bash
-git clone https://github.com/yourusername/idp-sample.git
+git clone https://github.com/shirok420/idp-sample.git
 cd idp-sample
 ```
 
@@ -86,6 +86,10 @@ APIゲートウェイの詳細設定は `config/kong/kong.yml` ファイルで�
 ## 開発環境
 
 このプロジェクトは開発環境として Docker Compose を使用しています。本番環境では Kubernetes を使用することを推奨します。
+
+## GitOpsによる設定管理
+
+このプロジェクトでは、TerraformとGitHub Actionsを使用してKeycloakのOAuthClient設定をGitOpsによって管理しています。詳細は [terraform-gitops.md](docs/terraform-gitops.md) を参照してください。
 
 ## トラブルシューティング
 
